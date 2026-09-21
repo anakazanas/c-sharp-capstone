@@ -53,6 +53,14 @@ builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<UserServiceContext>();
+    var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
+    await context.Database.EnsureCreatedAsync();
+    await DataSeeder.SeedAsync(context, passwordHasher);
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
