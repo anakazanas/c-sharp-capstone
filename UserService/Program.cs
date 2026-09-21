@@ -16,8 +16,17 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1", new() { Title = "Digital Library Management System API", Version = "v1" });
 });
 
-builder.Services.AddDbContext<UserServiceContext>(options =>
-    options.UseInMemoryDatabase("UserServiceDb"));
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddDbContext<UserServiceContext>(options =>
+        options.UseInMemoryDatabase("UserServiceDb"));
+}
+else
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    builder.Services.AddDbContext<UserServiceContext>(options =>
+        options.UseNpgsql(connectionString));
+}
 
 builder.Services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
 builder.Services.AddScoped<IPasswordHasher, BCryptPasswordHasher>();
@@ -57,11 +66,20 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<UserServiceContext>();
     var passwordHasher = scope.ServiceProvider.GetRequiredService<IPasswordHasher>();
-    await context.Database.EnsureCreatedAsync();
+
+    if (app.Environment.IsDevelopment())
+    {
+        await context.Database.EnsureCreatedAsync();
+    }
+    else
+    {
+        await context.Database.MigrateAsync();
+    }
+
     await DataSeeder.SeedAsync(context, passwordHasher);
 }
 
-if (app.Environment.IsDevelopment())
+if (true) // Swagger enabled in all environments per Milestone 5
 {
     app.UseSwagger();
     app.UseSwaggerUI();
